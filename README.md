@@ -38,6 +38,19 @@ I installed the recommended UART version of NeoPixelBus.
 
 https://github.com/Makuna/NeoPixelBus/tree/UartDriven 
 
+# Using HD motor as rotary input
+
+An LM358 and a couple of resistors will make a usable digital input signal:
+https://shanteacontrols.wordpress.com/2015/02/24/building-ceylon/
+
+Powered by 3.3V the output will not be more than about 2V which is low but workable.
+
+Connected to two coils of the harddrive motor the two inputs
+will go low in sequence when the motor is turned and the
+order will tell you the rotation direction.
+
+
+
 
 
 

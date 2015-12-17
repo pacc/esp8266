@@ -16,7 +16,9 @@ const char WiFiAPPSK[] = "sparkfun";
 /////////////////////
 const int LED_PIN = 5; // Thing's onboard, green LED
 const int ANALOG_PIN = A0; // The only analog pin on the Thing
-const int DIGITAL_PIN = 12; // Digital pin to be read
+const int ROTARY_1_PIN = 12; // Digital pin to be read
+const int ROTARY_2_PIN = 13; // Digital pin to be read
+
 const int ONE_WIRE_BUS = 2;  // DS18B20 pin
 
 OneWire oneWire(ONE_WIRE_BUS);
@@ -25,7 +27,7 @@ DallasTemperature DS18B20(&oneWire);
 
 #define pixelCount 3
 #define pixelPin 0  // make sure to set this to the correct pin
-#define colorSaturation 64
+#define colorSaturation 128
 
 NeoPixelBus strip = NeoPixelBus(pixelCount, pixelPin);
 RgbColor red = RgbColor(colorSaturation, 0, 0);
@@ -34,9 +36,15 @@ RgbColor blue = RgbColor(0, 0, colorSaturation);
 RgbColor white = RgbColor(colorSaturation);
 RgbColor black = RgbColor(0);
 
-const RgbColor colors[4] = {red, green, blue, white};
+const RgbColor colors[4] = {red, green, blue, black};
 
 int counter = 0;
+
+bool neutral = true;
+int rotation = 0;
+
+int pulses[2] = {0, 0};
+int lasttime[2] = {0, 0};
 
 WiFiServer server(80);
 
@@ -62,16 +70,49 @@ void setupWiFi()
   WiFi.softAP(AP_NameChar, WiFiAPPSK);
 }
 
+void ioChanged(int index) {
+  int time = micros();
+  /*if (time - lasttime[index] < 5) {
+    return;
+  }*/
+  int pin1 = digitalRead(ROTARY_1_PIN);
+  int pin2 = digitalRead(ROTARY_2_PIN);
+
+  if (pin1 == 1 && pin2 == 1) {
+    digitalWrite(LED_PIN, HIGH);
+    neutral = true;
+  } else {
+    if (neutral && pin1 == 1) {
+      rotation = 1;
+    } else if (neutral && pin2 == 1)  {
+      rotation = 2;
+    }
+    neutral = false;
+
+    digitalWrite(LED_PIN, LOW);
+  }
+
+  pulses[index]++;
+  lasttime[index] = time;
+}
+
+void io1Changed() { ioChanged(0); }
+void io2Changed() { ioChanged(1); }
+
 void initHardware()
 {
   Serial.begin(115200);
-  pinMode(DIGITAL_PIN, INPUT_PULLUP);
+  pinMode(ROTARY_1_PIN, INPUT_PULLUP);
+  pinMode(ROTARY_2_PIN, INPUT_PULLUP);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
  
   // this resets all the neopixels to an off state
   strip.Begin();
   strip.Show();
+
+  attachInterrupt(ROTARY_1_PIN, io1Changed, CHANGE);
+  attachInterrupt(ROTARY_2_PIN, io2Changed, CHANGE);
   
   // Don't need to set ANALOG_PIN as input, 
   // that's all it can be.
@@ -100,6 +141,14 @@ void loop()
     
     strip.Show();
     counter = 0;
+
+    Serial.print("\nRotation 1 ");
+    Serial.print(pulses[0]);
+    Serial.print("\nRotation 2 ");
+    Serial.print(pulses[1]);
+    Serial.print("\nDirection ");
+    Serial.print(rotation);
+    Serial.println();
   }
   
   // Check if a client has connected
@@ -155,9 +204,22 @@ void loop()
     s += String(analogRead(ANALOG_PIN));
     s += "<br>"; // Go to the next line.
     s += "Digital Pin 12 = ";
-    s += String(digitalRead(DIGITAL_PIN));
+    s += String(digitalRead(ROTARY_1_PIN));
+    s += "<br>"; // Go to the next line.
+    s += "Digital Pin 13 = ";
+    s += String(digitalRead(ROTARY_2_PIN));
+    s += "<br>"; // Go to the next line.
     s += "Temperature on Pin 2 = ";
     s += String(temp);
+
+    s += "<br>";
+    s += String(pulses[0]);
+    s += "<br>";
+    s += String(pulses[1]);
+    s += "<br> Direction";
+    s += String(rotation);
+    pulses[0] = 0;
+    pulses[1] = 0;
   }
   else
   {
