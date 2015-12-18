@@ -1,5 +1,8 @@
 # esp8266
 Experiments on esp8266 "Thing" card by sparkfun,
+all of these functionalities were connected at the same time
+but it is probably easy to separate them out or go to the original source
+of inspiration.
 
 # Hello world
 
@@ -42,6 +45,7 @@ https://github.com/Makuna/NeoPixelBus/tree/UartDriven
 
 An LM358 and a couple of resistors will make a usable digital input signal:
 https://shanteacontrols.wordpress.com/2015/02/24/building-ceylon/
+(I actually started with http://www.fleurey.com/franck/pmwiki.php?n=Main.HDDEncoder)
 
 Powered by 3.3V the output will not be more than about 2V which is low but workable.
 
@@ -49,7 +53,21 @@ Connected to two coils of the harddrive motor the two inputs
 will go low in sequence when the motor is turned and the
 order will tell you the rotation direction.
 
+# Making a HD motor turn
 
+Driving a hd motor requires three PWM outputs to power each motor coil in phase,
+I connected the motor with this description:
+
+http://theamateurprogrammer.blogspot.se/2014/02/revitalizing-old-hard-drive-motors.html
+
+It turns out that the ESP8266 does not really have PWM registers,
+and the software/timer interrupt driven functionality in Arduino will not let you adjust the phase between different pwm ports.
+The solution is to implement the timer interrupt and set GPIO's yourself:
+
+http://www.switchdoc.com/2015/10/iot-esp8266-timer-tutorial-arduino-ide/
+
+I have yet to investigate smooth acceleration/control and position/speed feedback.
+That would be a good base for a HD clock ( http://www.ian.org/HD-Clock/ )
 
 
 

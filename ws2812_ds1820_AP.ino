@@ -6,6 +6,10 @@
 
 #include <ESP8266WiFi.h>
 
+extern "C" {
+  #include "user_interface.h"
+}
+
 //////////////////////
 // WiFi Definitions //
 //////////////////////
@@ -14,7 +18,10 @@ const char WiFiAPPSK[] = "sparkfun";
 /////////////////////
 // Pin Definitions //
 /////////////////////
-const int LED_PIN = 5; // Thing's onboard, green LED
+const int PWM0_PIN = 5; // Thing's onboard, green LED
+const int PWM1_PIN = 4; // For PWM
+const int PWM2_PIN = 14; // For PWM
+
 const int ANALOG_PIN = A0; // The only analog pin on the Thing
 const int ROTARY_1_PIN = 12; // Digital pin to be read
 const int ROTARY_2_PIN = 13; // Digital pin to be read
@@ -39,6 +46,9 @@ RgbColor black = RgbColor(0);
 const RgbColor colors[4] = {red, green, blue, black};
 
 int counter = 0;
+
+os_timer_t myTimer;
+int pwm = 0;
 
 bool neutral = true;
 int rotation = 0;
@@ -70,6 +80,28 @@ void setupWiFi()
   WiFi.softAP(AP_NameChar, WiFiAPPSK);
 }
 
+void timerCallback(void *pArg) {
+    switch (pwm) {
+      case 0:
+        digitalWrite(PWM2_PIN, LOW);
+        digitalWrite(PWM0_PIN, HIGH);
+        pwm++;
+        break;
+      case 1:
+        digitalWrite(PWM0_PIN, LOW);
+        digitalWrite(PWM1_PIN, HIGH);
+        pwm++;
+        break;
+      case 2:
+        digitalWrite(PWM1_PIN, LOW);
+        digitalWrite(PWM2_PIN, HIGH);
+        // fallthrough
+     default:
+        pwm = 0;
+        break;
+    }
+}
+
 void ioChanged(int index) {
   int time = micros();
   /*if (time - lasttime[index] < 5) {
@@ -79,7 +111,6 @@ void ioChanged(int index) {
   int pin2 = digitalRead(ROTARY_2_PIN);
 
   if (pin1 == 1 && pin2 == 1) {
-    digitalWrite(LED_PIN, HIGH);
     neutral = true;
   } else {
     if (neutral && pin1 == 1) {
@@ -88,8 +119,6 @@ void ioChanged(int index) {
       rotation = 2;
     }
     neutral = false;
-
-    digitalWrite(LED_PIN, LOW);
   }
 
   pulses[index]++;
@@ -104,9 +133,14 @@ void initHardware()
   Serial.begin(115200);
   pinMode(ROTARY_1_PIN, INPUT_PULLUP);
   pinMode(ROTARY_2_PIN, INPUT_PULLUP);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, HIGH);
- 
+
+  pinMode(PWM0_PIN, OUTPUT);
+  pinMode(PWM1_PIN, OUTPUT);
+  pinMode(PWM2_PIN, OUTPUT);
+
+  os_timer_setfn(&myTimer, timerCallback, NULL);
+  os_timer_arm(&myTimer, 8, true);
+
   // this resets all the neopixels to an off state
   strip.Begin();
   strip.Show();
@@ -184,7 +218,7 @@ void loop()
 
   // Set GPIO5 according to the request
   if (val >= 0)
-    digitalWrite(LED_PIN, val);
+    digitalWrite(PWM0_PIN, val);
 
   client.flush();
 
